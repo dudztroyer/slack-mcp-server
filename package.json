@@ -1,6 +1,6 @@
 {
   "name": "@dudztroyer/slack-mcp-server",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "MCP server for interacting with Slack",
   "license": "MIT",
   "author": "Eduardo Roeder (eduardo_roeder@outlook.com)",

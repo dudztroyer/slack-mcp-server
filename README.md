@@ -1,5 +1,8 @@
 # slack-mcp-server
 
+[![Build Status](https://github.com/dudztroyer/slack-mcp-server/workflows/Test/badge.svg)](https://github.com/dudztroyer/slack-mcp-server/actions)
+[![npm version](https://badge.fury.io/js/%40dudztroyer%2Fslack-mcp-server.svg)](https://www.npmjs.com/package/@dudztroyer/slack-mcp-server)
+
 ## Disclaimer
 
 This project includes [code](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/slack) originally developed by Anthropic and released under the MIT License. Substantial modifications and new functionality have been added by dudztroyer, and are licensed under the Apache License, Version 2.0.

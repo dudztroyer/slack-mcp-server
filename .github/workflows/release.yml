@@ -30,11 +30,8 @@ jobs:
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          registry-url: "https://npm.pkg.github.com"
-          scope: "dudztroyer"
+          registry-url: "https://registry.npmjs.org"
           node-version: 20
 
       - name: Configure Git
@@ -96,10 +93,10 @@ jobs:
           gh release upload "v${{ steps.get_version.outputs.new_version }}" \
             dist-v${{ steps.get_version.outputs.new_version }}.zip
 
-      - name: Publish to GitHub Package Registry
+      - name: Publish to npm
         run: npm publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Clean up temporary files
         run: |
           rm -f dist-v${{ steps.get_version.outputs.new_version }}.zip
@@ -119,5 +116,4 @@ jobs:
           echo "- 🚀 Created GitHub release with changelog" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Automatically triggered:" >> $GITHUB_STEP_SUMMARY
-          echo "- 📦 Package publishing (publish.yml)" >> $GITHUB_STEP_SUMMARY
-          echo "- 🐳 Docker image build and push (docker.yml)" >> $GITHUB_STEP_SUMMARY
+          echo "- 📦 Package published to npm" >> $GITHUB_STEP_SUMMARY

@@ -15,40 +15,40 @@ interface ListChannelsArgs {
 }
 
 interface PostMessageArgs {
-  channel_id: string;
+  channel: string;
   text: string;
 }
 
 interface ReplyToThreadArgs {
-  channel_id: string;
+  channel: string;
   thread_ts: string;
   text: string;
 }
 
 interface PostMarkdownMessageArgs {
-  channel_id: string;
+  channel: string;
   text: string;
 }
 
 interface ReplyToThreadMarkdownArgs {
-  channel_id: string;
+  channel: string;
   thread_ts: string;
   text: string;
 }
 
 interface AddReactionArgs {
-  channel_id: string;
+  channel: string;
   timestamp: string;
   reaction: string;
 }
 
 interface GetChannelHistoryArgs {
-  channel_id: string;
+  channel: string;
   limit?: number;
 }
 
 interface GetThreadRepliesArgs {
-  channel_id: string;
+  channel: string;
   thread_ts: string;
 }
 
@@ -119,12 +119,12 @@ export class SlackClient {
     };
   }
 
-  async postMessage(channel_id: string, text: string): Promise<any> {
+  async postMessage(channel: string, text: string): Promise<any> {
     const response = await fetch("https://slack.com/api/chat.postMessage", {
       method: "POST",
       headers: this.botHeaders,
       body: JSON.stringify({
-        channel: channel_id,
+        channel: channel,
         text: text,
       }),
     });
@@ -133,7 +133,7 @@ export class SlackClient {
   }
 
   async postReply(
-    channel_id: string,
+    channel: string,
     thread_ts: string,
     text: string,
   ): Promise<any> {
@@ -141,7 +141,7 @@ export class SlackClient {
       method: "POST",
       headers: this.botHeaders,
       body: JSON.stringify({
-        channel: channel_id,
+        channel: channel,
         thread_ts: thread_ts,
         text: text,
       }),
@@ -150,14 +150,13 @@ export class SlackClient {
     return response.json();
   }
 
-  async postMarkdownMessage(channel_id: string, text: string): Promise<any> {
+  async postMarkdownMessage(channel: string, text: string): Promise<any> {
     const response = await fetch("https://slack.com/api/chat.postMessage", {
       method: "POST",
       headers: this.botHeaders,
       body: JSON.stringify({
-        channel: channel_id,
-        text: text,
-        mrkdwn: true,
+        channel: channel,
+        markdown_text: text,
       }),
     });
 
@@ -165,7 +164,7 @@ export class SlackClient {
   }
 
   async postMarkdownReply(
-    channel_id: string,
+    channel: string,
     thread_ts: string,
     text: string,
   ): Promise<any> {
@@ -173,10 +172,9 @@ export class SlackClient {
       method: "POST",
       headers: this.botHeaders,
       body: JSON.stringify({
-        channel: channel_id,
+        channel: channel,
         thread_ts: thread_ts,
-        text: text,
-        mrkdwn: true,
+        markdown_text: text,
       }),
     });
 
@@ -184,7 +182,7 @@ export class SlackClient {
   }
 
   async addReaction(
-    channel_id: string,
+    channel: string,
     timestamp: string,
     reaction: string,
   ): Promise<any> {
@@ -192,7 +190,7 @@ export class SlackClient {
       method: "POST",
       headers: this.botHeaders,
       body: JSON.stringify({
-        channel: channel_id,
+        channel: channel,
         timestamp: timestamp,
         name: reaction,
       }),
@@ -202,11 +200,11 @@ export class SlackClient {
   }
 
   async getChannelHistory(
-    channel_id: string,
+    channel: string,
     limit: number = 10,
   ): Promise<any> {
     const params = new URLSearchParams({
-      channel: channel_id,
+      channel: channel,
       limit: limit.toString(),
     });
 
@@ -218,9 +216,9 @@ export class SlackClient {
     return response.json();
   }
 
-  async getThreadReplies(channel_id: string, thread_ts: string): Promise<any> {
+  async getThreadReplies(channel: string, thread_ts: string): Promise<any> {
     const params = new URLSearchParams({
-      channel: channel_id,
+      channel: channel,
       ts: thread_ts,
     });
 
@@ -293,14 +291,14 @@ export function createSlackServer(slackClient: SlackClient): McpServer {
     "slack_post_message",
     {
       title: "Post Slack Message",
-      description: "Post a new message to a Slack channel or direct message to user",
+      description: "Post a new message to a Slack channel or direct message to user. Accepts both channel names (#general, general) and channel IDs (C1234567890).",
       inputSchema: {
-        channel_id: z.string().describe("The ID of the channel or user to post to"),
+        channel: z.string().describe("The channel name (e.g., #general, general) or channel ID (e.g., C1234567890) to post to. Also accepts user IDs for direct messages."),
         text: z.string().describe("The message text to post"),
       },
     },
-    async ({ channel_id, text }) => {
-      const response = await slackClient.postMessage(channel_id, text);
+    async ({ channel, text }) => {
+      const response = await slackClient.postMessage(channel, text);
       return {
         content: [{ type: "text", text: JSON.stringify(response) }],
       };
@@ -311,15 +309,15 @@ export function createSlackServer(slackClient: SlackClient): McpServer {
     "slack_reply_to_thread",
     {
       title: "Reply to Slack Thread",
-      description: "Reply to a specific message thread in Slack",
+      description: "Reply to a specific message thread in Slack. Accepts both channel names (#general, general) and channel IDs (C1234567890).",
       inputSchema: {
-        channel_id: z.string().describe("The ID of the channel containing the thread"),
+        channel: z.string().describe("The channel name (e.g., #general, general) or channel ID (e.g., C1234567890) containing the thread"),
         thread_ts: z.string().describe("The timestamp of the parent message in the format '1234567890.123456'. Timestamps in the format without the period can be converted by adding the period such that 6 numbers come after it."),
         text: z.string().describe("The reply text"),
       },
     },
-    async ({ channel_id, thread_ts, text }) => {
-      const response = await slackClient.postReply(channel_id, thread_ts, text);
+    async ({ channel, thread_ts, text }) => {
+      const response = await slackClient.postReply(channel, thread_ts, text);
       return {
         content: [{ type: "text", text: JSON.stringify(response) }],
       };
@@ -330,15 +328,15 @@ export function createSlackServer(slackClient: SlackClient): McpServer {
     "slack_add_reaction",
     {
       title: "Add Slack Reaction",
-      description: "Add a reaction emoji to a message",
+      description: "Add a reaction emoji to a message. Accepts both channel names (#general, general) and channel IDs (C1234567890).",
       inputSchema: {
-        channel_id: z.string().describe("The ID of the channel containing the message"),
+        channel: z.string().describe("The channel name (e.g., #general, general) or channel ID (e.g., C1234567890) containing the message"),
         timestamp: z.string().describe("The timestamp of the message to react to"),
         reaction: z.string().describe("The name of the emoji reaction (without ::)"),
       },
     },
-    async ({ channel_id, timestamp, reaction }) => {
-      const response = await slackClient.addReaction(channel_id, timestamp, reaction);
+    async ({ channel, timestamp, reaction }) => {
+      const response = await slackClient.addReaction(channel, timestamp, reaction);
       return {
         content: [{ type: "text", text: JSON.stringify(response) }],
       };
@@ -349,14 +347,14 @@ export function createSlackServer(slackClient: SlackClient): McpServer {
     "slack_get_channel_history",
     {
       title: "Get Slack Channel History",
-      description: "Get recent messages from a channel",
+      description: "Get recent messages from a channel. Accepts both channel names (#general, general) and channel IDs (C1234567890).",
       inputSchema: {
-        channel_id: z.string().describe("The ID of the channel"),
+        channel: z.string().describe("The channel name (e.g., #general, general) or channel ID (e.g., C1234567890)"),
         limit: z.number().optional().default(10).describe("Number of messages to retrieve (default 10)"),
       },
     },
-    async ({ channel_id, limit }) => {
-      const response = await slackClient.getChannelHistory(channel_id, limit);
+    async ({ channel, limit }) => {
+      const response = await slackClient.getChannelHistory(channel, limit);
       return {
         content: [{ type: "text", text: JSON.stringify(response) }],
       };
@@ -367,14 +365,14 @@ export function createSlackServer(slackClient: SlackClient): McpServer {
     "slack_get_thread_replies",
     {
       title: "Get Slack Thread Replies",
-      description: "Get all replies in a message thread",
+      description: "Get all replies in a message thread. Accepts both channel names (#general, general) and channel IDs (C1234567890).",
       inputSchema: {
-        channel_id: z.string().describe("The ID of the channel containing the thread"),
+        channel: z.string().describe("The channel name (e.g., #general, general) or channel ID (e.g., C1234567890) containing the thread"),
         thread_ts: z.string().describe("The timestamp of the parent message in the format '1234567890.123456'. Timestamps in the format without the period can be converted by adding the period such that 6 numbers come after it."),
       },
     },
-    async ({ channel_id, thread_ts }) => {
-      const response = await slackClient.getThreadReplies(channel_id, thread_ts);
+    async ({ channel, thread_ts }) => {
+      const response = await slackClient.getThreadReplies(channel, thread_ts);
       return {
         content: [{ type: "text", text: JSON.stringify(response) }],
       };
@@ -420,14 +418,14 @@ export function createSlackServer(slackClient: SlackClient): McpServer {
     "slack_post_markdown_message",
     {
       title: "Post Slack Message with Markdown",
-      description: "Post a new message to a Slack channel or direct message with markdown formatting enabled. Supports Slack's mrkdwn formatting like *bold*, _italic_, `code`, ```code blocks```, >quotes, and links.",
+      description: "Post a new message to a Slack channel or direct message with markdown formatting enabled. Accepts both channel names (#general, general) and channel IDs (C1234567890). Supports Slack's mrkdwn formatting like *bold*, _italic_, `code`, ```code blocks```, >quotes, and links.",
       inputSchema: {
-        channel_id: z.string().describe("The ID of the channel or user to post to"),
+        channel: z.string().describe("The channel name (e.g., #general, general) or channel ID (e.g., C1234567890) to post to. Also accepts user IDs for direct messages."),
         text: z.string().describe("The message text with markdown formatting (mrkdwn). Supports *bold*, _italic_, `code`, ```code blocks```, >quotes, <@user_id> mentions, <#channel_id> channel links, and <url|link text> links."),
       },
     },
-    async ({ channel_id, text }) => {
-      const response = await slackClient.postMarkdownMessage(channel_id, text);
+    async ({ channel, text }) => {
+      const response = await slackClient.postMarkdownMessage(channel, text);
       return {
         content: [{ type: "text", text: JSON.stringify(response) }],
       };
@@ -438,15 +436,15 @@ export function createSlackServer(slackClient: SlackClient): McpServer {
     "slack_reply_to_thread_markdown",
     {
       title: "Reply to Slack Thread with Markdown",
-      description: "Reply to a specific message thread in Slack with markdown formatting enabled. Supports Slack's mrkdwn formatting like *bold*, _italic_, `code`, ```code blocks```, >quotes, and links.",
+      description: "Reply to a specific message thread in Slack with markdown formatting enabled. Accepts both channel names (#general, general) and channel IDs (C1234567890). Supports Slack's mrkdwn formatting like *bold*, _italic_, `code`, ```code blocks```, >quotes, and links.",
       inputSchema: {
-        channel_id: z.string().describe("The ID of the channel containing the thread"),
+        channel: z.string().describe("The channel name (e.g., #general, general) or channel ID (e.g., C1234567890) containing the thread"),
         thread_ts: z.string().describe("The timestamp of the parent message in the format '1234567890.123456'. Timestamps in the format without the period can be converted by adding the period such that 6 numbers come after it."),
         text: z.string().describe("The reply text with markdown formatting (mrkdwn). Supports *bold*, _italic_, `code`, ```code blocks```, >quotes, <@user_id> mentions, <#channel_id> channel links, and <url|link text> links."),
       },
     },
-    async ({ channel_id, thread_ts, text }) => {
-      const response = await slackClient.postMarkdownReply(channel_id, thread_ts, text);
+    async ({ channel, thread_ts, text }) => {
+      const response = await slackClient.postMarkdownReply(channel, thread_ts, text);
       return {
         content: [{ type: "text", text: JSON.stringify(response) }],
       };

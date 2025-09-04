@@ -1,0 +1,123 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: "Version bump type"
+        required: true
+        default: "minor"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch full history for changelog generation
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          registry-url: "https://npm.pkg.github.com"
+          scope: "dudztroyer"
+          node-version: 20
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "bot@dudz.dev"
+          git config --local user.name "Dudz Bot"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build package
+        run: npm run build
+
+      - name: Install changelogen
+        run: npm install -g changelogen@latest
+
+      - name: Create release with changelogen
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Use changelogen with release and push flags
+          case "${{ github.event.inputs.version_bump }}" in
+            "major")
+              changelogen --release --push --major
+              ;;
+            "minor")
+              changelogen --release --push --minor
+              ;;
+            "patch")
+              changelogen --release --push --patch
+              ;;
+          esac
+
+      - name: Get new version for outputs
+        id: get_version
+        run: |
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "New version: ${NEW_VERSION}"
+
+      - name: Create distribution archive
+        run: |
+          cd dist
+          zip -r ../dist-v${{ steps.get_version.outputs.new_version }}.zip .
+          cd ..
+
+      - name: Create GitHub Release with changelogen
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANGELOGEN_TOKENS_GITHUB: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Use changelogen's GitHub release functionality
+          changelogen gh release v${{ steps.get_version.outputs.new_version }}
+
+          # Add distribution archive to the release
+          gh release upload "v${{ steps.get_version.outputs.new_version }}" \
+            dist-v${{ steps.get_version.outputs.new_version }}.zip
+
+      - name: Publish to GitHub Package Registry
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Clean up temporary files
+        run: |
+          rm -f dist-v${{ steps.get_version.outputs.new_version }}.zip
+
+      - name: Summary
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.get_version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Type**: ${{ github.event.inputs.version_bump }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release URL**: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.get_version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What changelogen did:" >> $GITHUB_STEP_SUMMARY
+          echo "- 📝 Generated beautiful changelog from conventional commits" >> $GITHUB_STEP_SUMMARY
+          echo "- 📦 Bumped version in package.json" >> $GITHUB_STEP_SUMMARY
+          echo "- 🏷️ Created and pushed git tag" >> $GITHUB_STEP_SUMMARY
+          echo "- 📤 Committed and pushed changes" >> $GITHUB_STEP_SUMMARY
+          echo "- 🚀 Created GitHub release with changelog" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Automatically triggered:" >> $GITHUB_STEP_SUMMARY
+          echo "- 📦 Package publishing (publish.yml)" >> $GITHUB_STEP_SUMMARY
+          echo "- 🐳 Docker image build and push (docker.yml)" >> $GITHUB_STEP_SUMMARY
